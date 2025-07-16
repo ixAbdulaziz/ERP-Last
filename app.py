@@ -23,7 +23,6 @@ db = SQLAlchemy(app)
 
 
 # --- تصميم نماذج قاعدة البيانات (ترجمة الجداول إلى كود) ---
-# --- تصميم نماذج قاعدة البيانات (ترجمة الجداول إلى كود) ---
 class Supplier(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), unique=True, nullable=False)
@@ -80,7 +79,7 @@ def home():
     # جلب آخر 5 فواتير
     latest_invoices = Invoice.query.order_by(Invoice.created_at.desc()).limit(5).all()
 
-    # --- تم تبسيط طريقة جلب آخر الموردين لتجنب الأخطاء المعقدة ---
+    # جلب آخر الموردين بناءً على آخر الفواتير
     latest_suppliers = []
     supplier_ids = set()
     for invoice in latest_invoices:
@@ -143,6 +142,49 @@ def add_invoice():
         return redirect(url_for('home'))
 
     return render_template('add.html')
+
+# --- << إضافة المسارات الجديدة هنا >> ---
+
+@app.route('/view')
+def view_suppliers():
+    # استعلام لجلب جميع الموردين مع حساب إحصائياتهم
+    suppliers_with_stats = db.session.query(
+        Supplier,
+        db.func.count(Invoice.id).label('invoice_count'),
+        db.func.sum(Invoice.total_amount).label('total_invoiced')
+    ).outerjoin(Invoice, Supplier.id == Invoice.supplier_id)\
+     .group_by(Supplier.id)\
+     .order_by(Supplier.name)\
+     .all()
+
+    return render_template('view.html', suppliers_with_stats=suppliers_with_stats)
+
+@app.route('/supplier/<int:supplier_id>')
+def supplier_details(supplier_id):
+    # جلب المورد المحدد أو إظهار خطأ 404
+    supplier = Supplier.query.get_or_404(supplier_id)
+    
+    # جلب فواتير هذا المورد مرتبة بالأحدث
+    invoices = Invoice.query.filter_by(supplier_id=supplier_id).order_by(Invoice.invoice_date.desc()).all()
+    
+    # جلب مدفوعات هذا المورد مرتبة بالأحدث
+    payments = Payment.query.filter_by(supplier_id=supplier_id).order_by(Payment.payment_date.desc()).all()
+    
+    # حساب الإحصائيات المالية
+    total_invoiced = sum(inv.total_amount for inv in invoices)
+    total_paid = sum(pay.amount for pay in payments)
+    outstanding_balance = total_invoiced - total_paid
+    
+    return render_template(
+        'supplier_details.html',
+        supplier=supplier,
+        invoices=invoices,
+        payments=payments,
+        total_invoiced=total_invoiced,
+        total_paid=total_paid,
+        outstanding_balance=outstanding_balance
+    )
+
 
 @app.route('/api/search_suppliers')
 def search_suppliers():
