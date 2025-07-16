@@ -11,7 +11,7 @@ app = Flask(__name__)
 db_url = os.environ.get('DATABASE_URL')
 # تعديل بسيط على الرابط ليتوافق مع SQLAlchemy
 if db_url and db_url.startswith("mysql://"):
-    db_url = db_url.replace('mysql://', 'mysql+mysqlclient://', 1)
+    db_url = db_url.replace('mysql://', 'mysql+pymysql://', 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
