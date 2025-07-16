@@ -153,7 +153,7 @@ def view_suppliers():
         db.func.count(Invoice.id).label('invoice_count'),
         db.func.sum(Invoice.total_amount).label('total_invoiced')
     ).outerjoin(Invoice, Supplier.id == Invoice.supplier_id)\
-     .group_by(Supplier.id)\
+     .group_by(Supplier.id, Supplier.name)\
      .order_by(Supplier.name)\
      .all()
 
