@@ -64,20 +64,9 @@ def create_app():
 
     db.init_app(app)
 
-    # --- << الكود الجديد والمؤقت لتحديث قاعدة البيانات >> ---
-    if os.environ.get("INIT_DB"):
-        with app.app_context():
-            print("--- DATABASE INITIALIZATION ---")
-            db.drop_all()
-            db.create_all()
-            print("--- DATABASE INITIALIZED SUCCESSFULLY ---")
-    # --- نهاية الكود الجديد ---
-
     # --- تسجيل المسارات داخل المصنع ---
     @app.route('/')
     def home():
-        # ... باقي الكود ...
-        # (نفس كود دالة home من الردود السابقة)
         suppliers_count = Supplier.query.count()
         invoices_count = Invoice.query.count()
         total_amount_query = db.session.query(db.func.sum(Invoice.total_amount)).scalar()
@@ -92,9 +81,6 @@ def create_app():
                 supplier_ids.add(invoice.supplier.id)
         return render_template('home.html', suppliers_count=suppliers_count, invoices_count=invoices_count, total_amount=total_amount, purchase_orders_count=purchase_orders_count, latest_invoices=latest_invoices, latest_suppliers=latest_suppliers)
 
-
-    # ... باقي دوال المسارات الأخرى ...
-    # (add_invoice, view_suppliers, supplier_details, etc.)
     @app.route('/add', methods=['GET', 'POST'])
     def add_invoice():
         if request.method == 'POST':
@@ -141,6 +127,41 @@ def create_app():
         total_paid = sum(pay.amount for pay in payments)
         outstanding_balance = total_invoiced - total_paid
         return render_template('supplier_details.html', supplier=supplier, invoices=invoices, payments=payments, total_invoiced=total_invoiced, total_paid=total_paid, outstanding_balance=outstanding_balance)
+        
+    @app.route('/supplier/<int:supplier_id>/add_payment', methods=['POST'])
+    def add_payment(supplier_id):
+        supplier = Supplier.query.get_or_404(supplier_id)
+        amount = request.form.get('payment_amount')
+        payment_date_str = request.form.get('payment_date')
+        notes = request.form.get('payment_notes')
+        if not amount or not payment_date_str:
+            flash('المبلغ والتاريخ حقول مطلوبة.', 'danger')
+            return redirect(url_for('supplier_details', supplier_id=supplier_id))
+        new_payment = Payment(supplier_id=supplier.id, amount=float(amount), payment_date=datetime.strptime(payment_date_str, '%Y-%m-%d').date(), notes=notes)
+        db.session.add(new_payment)
+        db.session.commit()
+        flash('تم تسجيل الدفعة بنجاح!', 'success')
+        return redirect(url_for('supplier_details', supplier_id=supplier_id))
+
+    # --- << المسار الجديد لحذف الفاتورة >> ---
+    @app.route('/invoice/<int:invoice_id>/delete', methods=['POST'])
+    def delete_invoice(invoice_id):
+        invoice = Invoice.query.get_or_404(invoice_id)
+        supplier_id = invoice.supplier_id # نحفظ رقم المورد للعودة لصفحته
+
+        # حذف الملف المرفق إذا كان موجودًا
+        if invoice.attachment_path:
+            try:
+                os.remove(os.path.join(app.config['UPLOAD_FOLDER'], invoice.attachment_path))
+            except OSError as e:
+                print(f"Error deleting file {invoice.attachment_path}: {e}")
+
+        # حذف سجل الفاتورة من قاعدة البيانات
+        db.session.delete(invoice)
+        db.session.commit()
+
+        flash('تم حذف الفاتورة بنجاح.', 'success')
+        return redirect(url_for('supplier_details', supplier_id=supplier_id))
 
     @app.route('/api/search_suppliers')
     def search_suppliers():
