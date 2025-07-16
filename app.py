@@ -45,8 +45,35 @@ class Invoice(db.Model):
 
 # --- مسارات التطبيق (الصفحات) ---
 
-# app.py
+@app.route('/')
+def home():
+    # حساب الإحصائيات الرئيسية
+    suppliers_count = Supplier.query.count()
+    invoices_count = Invoice.query.count()
+    total_amount_query = db.session.query(db.func.sum(Invoice.total_amount)).scalar()
+    total_amount = total_amount_query or 0
+    purchase_orders_count = 0 # مؤقت
 
+    # جلب آخر 5 فواتير
+    latest_invoices = Invoice.query.order_by(Invoice.created_at.desc()).limit(5).all()
+
+    # --- تم تبسيط طريقة جلب آخر الموردين لتجنب الأخطاء المعقدة ---
+    latest_suppliers = []
+    supplier_ids = set()
+    for invoice in latest_invoices:
+        if invoice.supplier and invoice.supplier.id not in supplier_ids:
+            latest_suppliers.append(invoice.supplier)
+            supplier_ids.add(invoice.supplier.id)
+
+    return render_template(
+        'home.html', 
+        suppliers_count=suppliers_count,
+        invoices_count=invoices_count,
+        total_amount=total_amount,
+        purchase_orders_count=purchase_orders_count,
+        latest_invoices=latest_invoices,
+        latest_suppliers=latest_suppliers
+    )
 
 
 @app.route('/add', methods=['GET', 'POST'])
@@ -64,9 +91,7 @@ def add_invoice():
         if 'attachment' in request.files:
             file = request.files['attachment']
             if file.filename != '':
-                # --- السطر الجديد الذي يحل المشكلة ---
                 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-                # --- نهاية السطر الجديد ---
                 attachment_filename = secure_filename(file.filename)
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], attachment_filename))
 
