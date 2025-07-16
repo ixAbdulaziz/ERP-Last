@@ -124,71 +124,61 @@
 
 {% block scripts %}
 <script>
+  // دالة لإغلاق أي نافذة منبثقة مفتوحة
+  function closeAllModals() {
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
-    // --- JavaScript الخاص بنافذة إضافة دفعة ---
-    const addPaymentBtn = document.getElementById('add-payment-btn');
+    // --- منطق نافذة إضافة دفعة ---
     const addPaymentModal = document.getElementById('add-payment-modal');
+    const addPaymentBtn = document.getElementById('add-payment-btn');
     const cancelPaymentBtn = document.getElementById('cancel-payment-btn');
-    const paymentForm = document.getElementById('add-payment-form');
-    if (paymentForm) {
-      const paymentDateInput = paymentForm.querySelector('input[name="payment_date"]');
-      if (addPaymentBtn) {
-        addPaymentBtn.addEventListener('click', () => {
-          paymentDateInput.valueAsDate = new Date();
-          addPaymentModal.classList.remove('hidden'); addPaymentModal.classList.add('flex');
-        });
-      }
-      if (cancelPaymentBtn) {
-        cancelPaymentBtn.addEventListener('click', () => {
-          addPaymentModal.classList.add('hidden'); addPaymentModal.classList.remove('flex');
-        });
-      }
-      if (addPaymentModal) {
-        addPaymentModal.addEventListener('click', (e) => {
-          if (e.target === addPaymentModal) {
-            addPaymentModal.classList.add('hidden'); addPaymentModal.classList.remove('flex');
-          }
-        });
-      }
+    const paymentDateInput = document.querySelector('#add-payment-form input[name="payment_date"]');
+
+    if (addPaymentBtn && addPaymentModal && cancelPaymentBtn && paymentDateInput) {
+      addPaymentBtn.addEventListener('click', () => {
+        closeAllModals(); // إغلاق أي نوافذ أخرى
+        paymentDateInput.valueAsDate = new Date();
+        addPaymentModal.classList.remove('hidden');
+        addPaymentModal.classList.add('flex');
+      });
+
+      cancelPaymentBtn.addEventListener('click', () => closeAllModals());
+      addPaymentModal.addEventListener('click', (e) => {
+        if (e.target === addPaymentModal) closeAllModals();
+      });
     }
 
-    // --- JavaScript الخاص بنافذة تأكيد حذف الفاتورة ---
+    // --- منطق نافذة تأكيد حذف الفاتورة ---
     const deleteInvoiceModal = document.getElementById('delete-invoice-modal');
     const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
     const invoiceNumberSpan = document.getElementById('invoice-number-to-delete');
     const deleteInvoiceForm = document.getElementById('delete-invoice-form');
     const deleteButtons = document.querySelectorAll('.delete-invoice-btn');
 
-    deleteButtons.forEach(button => {
-      button.addEventListener('click', function() {
-        const invoiceId = this.dataset.invoiceId;
-        const invoiceNumber = this.dataset.invoiceNumber;
-        
-        // تعيين رقم الفاتورة في رسالة التأكيد
-        invoiceNumberSpan.textContent = invoiceNumber;
-        
-        // تعيين مسار الحذف الصحيح للنموذج
-        deleteInvoiceForm.action = `/invoice/${invoiceId}/delete`;
-        
-        // إظهار نافذة التأكيد
-        deleteInvoiceModal.classList.remove('hidden');
-        deleteInvoiceModal.classList.add('flex');
-      });
-    });
+    if (deleteInvoiceModal && cancelDeleteBtn && invoiceNumberSpan && deleteInvoiceForm) {
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                closeAllModals(); // إغلاق أي نوافذ أخرى
+                const invoiceId = this.dataset.invoiceId;
+                const invoiceNumber = this.dataset.invoiceNumber;
+                
+                invoiceNumberSpan.textContent = invoiceNumber;
+                deleteInvoiceForm.action = `/invoice/${invoiceId}/delete`;
+                
+                deleteInvoiceModal.classList.remove('hidden');
+                deleteInvoiceModal.classList.add('flex');
+            });
+        });
 
-    if (cancelDeleteBtn) {
-      cancelDeleteBtn.addEventListener('click', () => {
-        deleteInvoiceModal.classList.add('hidden');
-        deleteInvoiceModal.classList.remove('flex');
-      });
-    }
-    if (deleteInvoiceModal) {
-      deleteInvoiceModal.addEventListener('click', (e) => {
-        if(e.target === deleteInvoiceModal) {
-          deleteInvoiceModal.classList.add('hidden');
-          deleteInvoiceModal.classList.remove('flex');
-        }
-      });
+        cancelDeleteBtn.addEventListener('click', () => closeAllModals());
+        deleteInvoiceModal.addEventListener('click', (e) => {
+            if(e.target === deleteInvoiceModal) closeAllModals();
+        });
     }
   });
 </script>
