@@ -23,13 +23,18 @@ db = SQLAlchemy(app)
 
 
 # --- تصميم نماذج قاعدة البيانات (ترجمة الجداول إلى كود) ---
+# --- تصميم نماذج قاعدة البيانات (ترجمة الجداول إلى كود) ---
 class Supplier(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), unique=True, nullable=False)
-    invoices = db.relationship('Invoice', backref='supplier', lazy=True)
+    # العلاقات مع الجداول الأخرى
+    invoices = db.relationship('Invoice', backref='supplier', lazy=True, cascade="all, delete-orphan")
+    payments = db.relationship('Payment', backref='supplier', lazy=True, cascade="all, delete-orphan")
+    purchase_orders = db.relationship('PurchaseOrder', backref='supplier', lazy=True, cascade="all, delete-orphan")
 
 class Invoice(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False)
     supplier_name = db.Column(db.String(255), nullable=False)
     invoice_number = db.Column(db.String(100), nullable=False)
     invoice_type = db.Column(db.String(100), nullable=False)
@@ -40,8 +45,26 @@ class Invoice(db.Model):
     total_amount = db.Column(db.Numeric(10, 2), nullable=False)
     notes = db.Column(db.Text, nullable=True)
     attachment_path = db.Column(db.String(255), nullable=True)
-    supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # للربط مع أوامر الشراء لاحقًا
+    purchase_order_id = db.Column(db.Integer, db.ForeignKey('purchase_order.id'), nullable=True)
+
+class Payment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False)
+    amount = db.Column(db.Numeric(10, 2), nullable=False)
+    payment_date = db.Column(db.Date, nullable=False)
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class PurchaseOrder(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    price = db.Column(db.Numeric(10, 2), nullable=False)
+    status = db.Column(db.String(50), default='active')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    invoices = db.relationship('Invoice', backref='purchase_order', lazy=True)
 
 # --- مسارات التطبيق (الصفحات) ---
 
