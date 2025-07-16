@@ -1,115 +1,39 @@
-<!doctype html>
-<html lang="ar" dir="rtl">
-  <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
-    <title>{% block title %}{% endblock %} - نظام المشتريات</title>
-    <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/css/tabler.min.css" rel="stylesheet"/>
-    <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/css/tabler-flags.min.css" rel="stylesheet"/>
-    <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/css/tabler-payments.min.css" rel="stylesheet"/>
-    <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/css/tabler-vendors.min.css" rel="stylesheet"/>
-    <style>
-      @import url('https://rsms.me/inter/inter.css');
-      :root {
-      	--tblr-font-sans-serif: 'Inter', -apple-system, BlinkMacSystemFont, San Francisco, Segoe UI, Roboto, Helvetica Neue, sans-serif;
-      }
-      body {
-      	font-feature-settings: "cv03", "cv04", "cv11";
-      }
-    </style>
-  </head>
-  <body >
-    <div class="page">
-      <aside class="navbar navbar-vertical navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
-          <h1 class="navbar-brand navbar-brand-autodark">
-            <a href="/">
-              ERP System
-            </a>
-          </h1>
-          <div class="collapse navbar-collapse" id="sidebar-menu">
-            <ul class="navbar-nav pt-lg-3">
-              <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('home') }}" >
-                  <span class="nav-link-icon d-md-none d-lg-inline-block">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l-2 0l9 -9l9 9l-2 0" /><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" /><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" /></svg>
-                  </span>
-                  <span class="nav-link-title">
-                    الرئيسية
-                  </span>
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('add_invoice') }}">
-                  <span class="nav-link-icon d-md-none d-lg-inline-block">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-file-plus" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M12 11l0 6" /><path d="M9 14l6 0" /></svg>
-                  </span>
-                  <span class="nav-link-title">
-                    إضافة فاتورة
-                  </span>
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="#">
-                  <span class="nav-link-icon d-md-none d-lg-inline-block">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-file-invoice" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M9 7l1 0" /><path d="M9 13l6 0" /><path d="M13 17l2 0" /></svg>
-                  </span>
-                  <span class="nav-link-title">
-                    عرض الفواتير
-                  </span>
-                </a>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </aside>
-      
-      <div class="page-wrapper">
-        <div class="page-header d-print-none">
-          <div class="container-xl">
-            <div class="row g-2 align-items-center">
-              <div class="col">
-                <h2 class="page-title">
-                  {% block page_title %}{% endblock %}
-                </h2>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="page-body">
-          <div class="container-xl">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-              {% if messages %}
-                {% for category, message in messages %}
-                  <div class="alert alert-{{ category }} alert-dismissible" role="alert">
-                    {{ message }}
-                    <a href="#" class="btn-close" data-bs-dismiss="alert" aria-label="close"></a>
-                  </div>
-                {% endfor %}
-              {% endif %}
-            {% endwith %}
-            
-            {% block content %}{% endblock %}
-          </div>
-        </div>
-
-        <footer class="footer footer-transparent d-print-none">
-          <div class="container-xl">
-            <div class="row text-center align-items-center flex-row-reverse">
-              <div class="col-12 col-lg-auto mt-3 mt-lg-0">
-                <ul class="list-inline list-inline-dots mb-0">
-                  <li class="list-inline-item">
-                    نظام المشتريات &copy; 2025
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </footer>
-      </div>
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{% endblock %} - نظام المشتريات</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap');
+  </style>
+</head>
+<body class="flex bg-gray-900 text-gray-100 min-h-screen">
+  <aside class="sidebar w-64 flex-col p-8 hidden md:flex">
+    <div class="text-center mb-12">
+      <h1 class="text-3xl font-bold bg-gradient-to-r from-slate-400 via-slate-300 to-slate-500 bg-clip-text text-transparent">المشتريات</h1>
+      <div class="w-20 h-1 bg-gradient-to-r from-slate-500 to-slate-400 mx-auto mt-3 rounded-full"></div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/js/tabler.min.js" defer></script>
-    {% block scripts %}{% endblock %}
-  </body>
+    <nav class="space-y-4 flex-1">
+      <a href="{{ url_for('home') }}" class="nav-link {% if request.endpoint == 'home' %}active{% endif %} block py-4 px-6">
+        <span class="relative z-10 flex items-center gap-3">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path></svg>
+          لوحة المعلومات
+        </span>
+      </a>
+      <a href="{{ url_for('add_invoice') }}" class="nav-link {% if request.endpoint == 'add_invoice' %}active{% endif %} block py-4 px-6">
+        <span class="relative z-10 flex items-center gap-3">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+          إضافة فاتورة
+        </span>
+      </a>
+    </nav>
+  </aside>
+
+  <main class="flex-1 p-4 md:p-8 space-y-8 overflow-y-auto">
+    {% block content %}{% endblock %}
+  </main>
+</body>
 </html>
