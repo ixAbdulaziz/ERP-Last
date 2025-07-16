@@ -53,23 +53,31 @@ class PurchaseOrder(db.Model):
 def create_app():
     app = Flask(__name__)
 
-    # --- إعدادات أساسية ---
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'a-very-secret-key')
     app.config['UPLOAD_FOLDER'] = 'static/uploads'
     
-    # --- ربط قاعدة البيانات ---
     db_url = os.environ.get('DATABASE_URL')
     if db_url and db_url.startswith("mysql://"):
         db_url = db_url.replace('mysql://', 'mysql+pymysql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    # الآن نقوم بربط كائن قاعدة البيانات بالتطبيق
     db.init_app(app)
+
+    # --- << الكود الجديد والمؤقت لتحديث قاعدة البيانات >> ---
+    if os.environ.get("INIT_DB"):
+        with app.app_context():
+            print("--- DATABASE INITIALIZATION ---")
+            db.drop_all()
+            db.create_all()
+            print("--- DATABASE INITIALIZED SUCCESSFULLY ---")
+    # --- نهاية الكود الجديد ---
 
     # --- تسجيل المسارات داخل المصنع ---
     @app.route('/')
     def home():
+        # ... باقي الكود ...
+        # (نفس كود دالة home من الردود السابقة)
         suppliers_count = Supplier.query.count()
         invoices_count = Invoice.query.count()
         total_amount_query = db.session.query(db.func.sum(Invoice.total_amount)).scalar()
@@ -84,6 +92,9 @@ def create_app():
                 supplier_ids.add(invoice.supplier.id)
         return render_template('home.html', suppliers_count=suppliers_count, invoices_count=invoices_count, total_amount=total_amount, purchase_orders_count=purchase_orders_count, latest_invoices=latest_invoices, latest_suppliers=latest_suppliers)
 
+
+    # ... باقي دوال المسارات الأخرى ...
+    # (add_invoice, view_suppliers, supplier_details, etc.)
     @app.route('/add', methods=['GET', 'POST'])
     def add_invoice():
         if request.method == 'POST':
@@ -145,11 +156,4 @@ def create_app():
 
     return app
 
-# يتم إنشاء التطبيق عند تشغيل Gunicorn
 app = create_app()
-
-# هذا الجزء أصبح غير ضروري لـ Gunicorn، ولكن يمكن إبقاؤه للتطوير المحلي
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(debug=True)
