@@ -66,11 +66,6 @@ class PurchaseOrder(db.Model):
 
 # --- مسارات التطبيق (الصفحات) ---
 
-@app.route('/health')
-def health_check():
-    """مسار بسيط وسريع لفحص صحة التطبيق."""
-    return "OK", 200
-
 @app.route('/')
 def home():
     suppliers_count = Supplier.query.count()
