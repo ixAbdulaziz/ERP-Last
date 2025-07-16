@@ -1,0 +1,115 @@
+{% extends "layout.html" %}
+
+{% block title %}إضافة فاتورة جديدة{% endblock %}
+
+{% block content %}
+<style>
+    .autocomplete-items {
+        position: absolute; border: 1px solid #d4d4d4; border-bottom: none;
+        border-top: none; z-index: 99; top: 100%; left: 0; right: 0;
+    }
+    .autocomplete-items div {
+        padding: 10px; cursor: pointer; background-color: #fff; border-bottom: 1px solid #d4d4d4;
+    }
+    .autocomplete-items div:hover { background-color: #e9e9e9; }
+</style>
+
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h3>📝 إضافة فاتورة جديدة</h3>
+    </div>
+    <div class="card-body">
+        <form action="/add" method="post" enctype="multipart/form-data">
+            
+            <div class="mb-3" style="position: relative;">
+                <label for="supplier_name" class="form-label">اسم المورد (اكتب للبحث أو لإضافة مورد جديد)</label>
+                <input type="text" class="form-control" id="supplier_name" name="supplier_name" required autocomplete="off">
+                <div id="supplier-suggestions"></div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="invoice_number" class="form-label">رقم الفاتورة</label>
+                    <input type="text" class="form-control" id="invoice_number" name="invoice_number" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                     <label for="invoice_type" class="form-label">نوع الفاتورة</label>
+                     <input type="text" class="form-control" id="invoice_type" name="invoice_type" required>
+                </div>
+            </div>
+             <div class="mb-3">
+                <label for="category_name" class="form-label">اسم الفئة</label>
+                <input type="text" class="form-control" id="category_name" name="category_name" required>
+            </div>
+            <div class="mb-3">
+                <label for="invoice_date" class="form-label">تاريخ الفاتورة</label>
+                <input type="date" class="form-control" id="invoice_date" name="invoice_date" required>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="amount_pre_tax" class="form-label">المبلغ (بدون ضريبة)</label>
+                    <input type="number" class="form-control" id="amount_pre_tax" name="amount_pre_tax" step="0.01" min="0" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="tax_amount" class="form-label">الضريبة (0 إن لم يوجد)</label>
+                    <input type="number" class="form-control" id="tax_amount" name="tax_amount" step="0.01" min="0" value="0" required>
+                </div>
+            </div>
+            <div class="alert alert-info">
+                <strong>الإجمالي: <span id="total-amount">0.00</span> ريال</strong>
+            </div>
+            <div class="mb-3">
+                <label for="notes" class="form-label">ملاحظات</label>
+                <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="attachment" class="form-label">المرفقات (صورة/PDF)</label>
+                <input class="form-control" type="file" id="attachment" name="attachment" accept="image/*,.pdf">
+            </div>
+
+            <button type="submit" class="btn btn-success w-100">حفظ الفاتورة</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // الكود الخاص بحساب الإجمالي 
+    const amountInput = document.getElementById('amount_pre_tax');
+    const taxInput = document.getElementById('tax_amount');
+    const totalDisplay = document.getElementById('total-amount');
+
+    function updateTotal() {
+        const amount = parseFloat(amountInput.value) || 0;
+        const tax = parseFloat(taxInput.value) || 0;
+        totalDisplay.textContent = (amount + tax).toFixed(2);
+    }
+    amountInput.addEventListener('input', updateTotal);
+    taxInput.addEventListener('input', updateTotal);
+    updateTotal();
+
+    // كود البحث التلقائي للمورد (سيتم تفعيله بالكامل في الخطوة القادمة)
+    const supplierInput = document.getElementById('supplier_name');
+    const suggestionsBox = document.getElementById('supplier-suggestions');
+
+    supplierInput.addEventListener('keyup', async function() {
+        const query = supplierInput.value;
+        suggestionsBox.innerHTML = '';
+        if (query.length < 2) return;
+
+        const response = await fetch(`/api/search_suppliers?q=${query}`);
+        const suppliers = await response.json();
+
+        suppliers.forEach(supplier => {
+            const div = document.createElement('div');
+            div.textContent = supplier.name;
+            div.addEventListener('click', function() {
+                supplierInput.value = this.textContent;
+                suggestionsBox.innerHTML = '';
+            });
+            suggestionsBox.appendChild(div);
+        });
+    });
+</script>
+{% endblock %}
