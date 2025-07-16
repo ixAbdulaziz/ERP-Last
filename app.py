@@ -161,4 +161,10 @@ def search_suppliers():
     return jsonify([{'id': s.id, 'name': s.name} for s in suppliers])
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    with app.app_context():
+        print("Dropping all tables...")
+        db.drop_all()  # حذف الجداول القديمة
+        print("Creating all tables...")
+        db.create_all() # إنشاء الجداول الجديدة بالهيكل الصحيح
+        print("Tables created successfully.")
+    # لا تقم بتشغيل التطبيق في هذه الخطوة، فقط قم بتحديث قاعدة البيانات
