@@ -1,12 +1,83 @@
 {% extends "layout.html" %}
 
-{% block title %}الرئيسية{% endblock %}
+{% block title %}لوحة المعلومات{% endblock %}
+
+{% block page_title %}لوحة المعلومات{% endblock %}
 
 {% block content %}
-<div class="p-5 mb-4 bg-light rounded-3">
-    <div class="container-fluid py-5">
-        <h1 class="display-5 fw-bold">لوحة المعلومات</h1>
-        <p class="col-md-8 fs-4">مرحباً بك في نظام إدارة المشتريات. سيتم عرض الإحصائيات هنا قريباً.</p>
+<div class="row row-deck row-cards">
+  <div class="col-sm-6 col-lg-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="subheader">الموردين</div>
+        </div>
+        <div class="h1 mb-3 stat-number" data-target="{{ suppliers_count }}">0</div>
+      </div>
     </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="subheader">الفواتير</div>
+        </div>
+        <div class="h1 mb-3 stat-number" data-target="{{ invoices_count }}">0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="subheader">أوامر الشراء</div>
+        </div>
+        <div class="h1 mb-3 stat-number" data-target="{{ purchase_orders_count }}">0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="subheader">إجمالي المبالغ</div>
+        </div>
+        <div class="h1 mb-3">{{ total_amount }} ريال</div>
+      </div>
+    </div>
+  </div>
 </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const counters = document.querySelectorAll('.stat-number');
+    const speed = 200; // يمكنك تعديل السرعة
+
+    counters.forEach(counter => {
+      // نتأكد أن العنصر ليس لعرض المبالغ المالية
+      if (counter.textContent.includes('ريال')) return;
+
+      const animate = () => {
+        const target = +counter.getAttribute('data-target');
+        const count = +counter.innerText;
+        const inc = Math.ceil(target / speed);
+
+        if (count < target) {
+          counter.innerText = count + inc;
+          setTimeout(animate, 10);
+        } else {
+          counter.innerText = target;
+        }
+      };
+
+      animate();
+    });
+  });
+</script>
 {% endblock %}
