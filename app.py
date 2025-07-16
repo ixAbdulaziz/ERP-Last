@@ -45,9 +45,32 @@ class Invoice(db.Model):
 
 # --- مسارات التطبيق (الصفحات) ---
 
+# app.py
+
 @app.route('/')
 def home():
-    return render_template('home.html')
+    # 1. حساب عدد الموردين
+    suppliers_count = Supplier.query.count()
+    
+    # 2. حساب عدد الفواتير
+    invoices_count = Invoice.query.count()
+    
+    # 3. حساب إجمالي المبالغ لكل الفواتير
+    total_amount_query = db.session.query(db.func.sum(Invoice.total_amount)).scalar()
+    # إذا لم تكن هناك فواتير، سيكون المجموع None، لذا نجعله 0
+    total_amount = total_amount_query or 0
+    
+    # 4. أوامر الشراء (مؤقتًا، سنجعلها 0 حتى نبني الميزة)
+    purchase_orders_count = 0
+
+    # إرسال البيانات إلى القالب
+    return render_template(
+        'home.html', 
+        suppliers_count=suppliers_count,
+        invoices_count=invoices_count,
+        total_amount=f'{total_amount:,.2f}', # تنسيق الرقم مع فواصل وآصلتين عشريتين
+        purchase_orders_count=purchase_orders_count
+    )
 
 @app.route('/add', methods=['GET', 'POST'])
 def add_invoice():
