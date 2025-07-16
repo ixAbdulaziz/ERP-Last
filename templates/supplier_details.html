@@ -1,0 +1,89 @@
+{% extends "layout.html" %}
+
+{% block title %}تفاصيل {{ supplier.name }}{% endblock %}
+
+{% block content %}
+<section class="page-header fade-up">
+  <div class="flex items-center justify-between flex-wrap gap-4">
+    <div>
+      <h2 class="text-3xl font-bold bg-gradient-to-r from-slate-300 via-slate-200 to-slate-400 bg-clip-text text-transparent mb-2">فواتير ومدفوعات: {{ supplier.name }}</h2>
+      <p class="text-slate-400 text-base">جميع سجلات المورد في مكان واحد.</p>
+    </div>
+    <div class="flex items-center gap-4">
+      <a href="{{ url_for('view_suppliers') }}" class="modern-btn">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        العودة للموردين
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="payment-stats grid grid-cols-1 md:grid-cols-3 gap-6 fade-up" style="animation-delay: 0.1s;">
+  <div class="payment-stat-card invoices">
+    <div class="payment-stat-value invoices">{{ "%.2f"|format(total_invoiced) }} ريال</div>
+    <div class="payment-stat-label">إجمالي الفواتير</div>
+  </div>
+  <div class="payment-stat-card payments">
+    <div class="payment-stat-value payments">{{ "%.2f"|format(total_paid) }} ريال</div>
+    <div class="payment-stat-label">إجمالي المدفوعات</div>
+  </div>
+  <div class="payment-stat-card outstanding">
+    <div class="payment-stat-value outstanding">{{ "%.2f"|format(outstanding_balance) }} ريال</div>
+    <div class="payment-stat-label">المبلغ المستحق</div>
+  </div>
+</section>
+
+<section class="glass-card fade-up" style="animation-delay: 0.2s;">
+  <h3 class="text-2xl font-bold text-slate-200 mb-6">سجل المدفوعات</h3>
+  <div class="modern-table-container">
+    <table class="payment-table">
+      <thead>
+        <tr><th>التاريخ</th><th>المبلغ</th><th>الملاحظات</th></tr>
+      </thead>
+      <tbody>
+        {% for payment in payments %}
+          <tr>
+            <td>{{ payment.payment_date.strftime('%Y-%m-%d') }}</td>
+            <td class="font-bold text-green-300">{{ "%.2f"|format(payment.amount) }} ريال</td>
+            <td>{{ payment.notes or 'لا توجد' }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="3" class="text-center py-8 text-slate-400">لا توجد مدفوعات مسجلة لهذا المورد.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="glass-card fade-up" style="animation-delay: 0.3s;">
+  <h3 class="text-2xl font-bold text-slate-200 mb-6">سجل الفواتير</h3>
+  <div class="modern-table-container">
+    <table class="modern-table">
+      <thead>
+        <tr><th>رقم الفاتورة</th><th>التاريخ</th><th>النوع</th><th>الفئة</th><th>الإجمالي</th><th>الملاحظات</th><th>المرفق</th></tr>
+      </thead>
+      <tbody>
+        {% for invoice in invoices %}
+          <tr>
+            <td class="font-semibold text-white">{{ invoice.invoice_number }}</td>
+            <td class="text-white">{{ invoice.invoice_date.strftime('%Y-%m-%d') }}</td>
+            <td class="text-white">{{ invoice.invoice_type }}</td>
+            <td class="text-white">{{ invoice.category_name }}</td>
+            <td class="font-bold text-slate-300">{{ "%.2f"|format(invoice.total_amount) }} ريال</td>
+            <td>{{ invoice.notes or 'لا توجد' }}</td>
+            <td>
+              {% if invoice.attachment_path %}
+                <a href="{{ url_for('static', filename='uploads/' + invoice.attachment_path) }}" target="_blank" class="modern-btn info" style="padding: 8px 12px;">عرض</a>
+              {% else %}
+                <span class="text-slate-500">لا يوجد</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="text-center py-8 text-slate-400">لا توجد فواتير مسجلة لهذا المورد.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
