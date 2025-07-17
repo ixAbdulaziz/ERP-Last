@@ -124,58 +124,64 @@
 
 {% block scripts %}
 <script>
-  function closeAllModals() {
-    document.querySelectorAll('.modal').forEach(modal => {
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-    });
-  }
-
   document.addEventListener('DOMContentLoaded', function() {
-    const addPaymentModal = document.getElementById('add-payment-modal');
-    const addPaymentBtn = document.getElementById('add-payment-btn');
-    const cancelPaymentBtn = document.getElementById('cancel-payment-btn');
-    const paymentDateInput = document.querySelector('#add-payment-form input[name="payment_date"]');
-
-    if (addPaymentBtn && addPaymentModal && cancelPaymentBtn && paymentDateInput) {
-      addPaymentBtn.addEventListener('click', () => {
-        closeAllModals();
-        paymentDateInput.valueAsDate = new Date();
-        addPaymentModal.classList.remove('hidden');
-        addPaymentModal.classList.add('flex');
-      });
-
-      cancelPaymentBtn.addEventListener('click', closeAllModals);
-      addPaymentModal.addEventListener('click', (e) => {
-        if (e.target === addPaymentModal) closeAllModals();
+    // --- دالة عامة لإغلاق كل النوافذ ---
+    function closeAllModals() {
+      document.querySelectorAll('.modal').forEach(modal => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
       });
     }
 
+    // --- منطق نافذة إضافة دفعة ---
+    const addPaymentModal = document.getElementById('add-payment-modal');
+    const addPaymentBtn = document.getElementById('add-payment-btn');
+    const cancelPaymentBtn = document.getElementById('cancel-payment-btn');
+    
+    // ربط الأحداث فقط إذا كانت العناصر موجودة
+    if (addPaymentBtn) {
+      addPaymentBtn.addEventListener('click', () => {
+        if(addPaymentModal) {
+          const paymentDateInput = addPaymentModal.querySelector('input[name="payment_date"]');
+          paymentDateInput.valueAsDate = new Date();
+          addPaymentModal.classList.remove('hidden');
+          addPaymentModal.classList.add('flex');
+        }
+      });
+    }
+
+    if (cancelPaymentBtn) {
+      cancelPaymentBtn.addEventListener('click', closeAllModals);
+    }
+    
+    if (addPaymentModal) {
+        addPaymentModal.addEventListener('click', e => { if (e.target === addPaymentModal) closeAllModals(); });
+    }
+
+    // --- منطق نافذة تأكيد حذف الفاتورة ---
     const deleteInvoiceModal = document.getElementById('delete-invoice-modal');
     const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
-    const invoiceNumberSpan = document.getElementById('invoice-number-to-delete');
-    const deleteInvoiceForm = document.getElementById('delete-invoice-form');
     const deleteButtons = document.querySelectorAll('.delete-invoice-btn');
 
-    if (deleteInvoiceModal && cancelDeleteBtn && invoiceNumberSpan && deleteInvoiceForm) {
+    if (deleteInvoiceModal) {
         deleteButtons.forEach(button => {
             button.addEventListener('click', function() {
-                closeAllModals();
                 const invoiceId = this.dataset.invoiceId;
                 const invoiceNumber = this.dataset.invoiceNumber;
                 
-                invoiceNumberSpan.textContent = invoiceNumber;
-                deleteInvoiceForm.action = `/invoice/${invoiceId}/delete`;
+                const invoiceNumberSpan = deleteInvoiceModal.querySelector('#invoice-number-to-delete');
+                const deleteInvoiceForm = deleteInvoiceModal.querySelector('#delete-invoice-form');
+
+                if (invoiceNumberSpan) invoiceNumberSpan.textContent = invoiceNumber;
+                if (deleteInvoiceForm) deleteInvoiceForm.action = `/invoice/${invoiceId}/delete`;
                 
                 deleteInvoiceModal.classList.remove('hidden');
                 deleteInvoiceModal.classList.add('flex');
             });
         });
 
-        cancelDeleteBtn.addEventListener('click', closeAllModals);
-        deleteInvoiceModal.addEventListener('click', (e) => {
-            if(e.target === deleteInvoiceModal) closeAllModals();
-        });
+        if (cancelDeleteBtn) cancelDeleteBtn.addEventListener('click', closeAllModals);
+        deleteInvoiceModal.addEventListener('click', e => { if(e.target === deleteInvoiceModal) closeAllModals(); });
     }
   });
 </script>
