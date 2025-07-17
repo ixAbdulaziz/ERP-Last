@@ -4,32 +4,24 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from werkzeug.utils import secure_filename
 
-# نقوم بإنشاء كائن قاعدة البيانات هنا، ولكن بدون ربطه بالتطبيق بعد
 db = SQLAlchemy()
 
-# --- تصميم نماذج قاعدة البيانات (تبقى كما هي) ---
+# --- النماذج (Models) كما هي ---
 class Supplier(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), unique=True, nullable=False)
     invoices = db.relationship('Invoice', backref='supplier', lazy=True, cascade="all, delete-orphan")
     payments = db.relationship('Payment', backref='supplier', lazy=True, cascade="all, delete-orphan")
-    purchase_orders = db.relationship('PurchaseOrder', backref='supplier', lazy=True, cascade="all, delete-orphan")
 
 class Invoice(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False)
-    supplier_name = db.Column(db.String(255), nullable=False)
     invoice_number = db.Column(db.String(100), nullable=False)
-    invoice_type = db.Column(db.String(100), nullable=False)
-    category_name = db.Column(db.String(100), nullable=False)
-    invoice_date = db.Column(db.Date, nullable=False)
-    amount_pre_tax = db.Column(db.Numeric(10, 2), nullable=False)
-    tax_amount = db.Column(db.Numeric(10, 2), nullable=False)
-    total_amount = db.Column(db.Numeric(10, 2), nullable=False)
     notes = db.Column(db.Text, nullable=True)
+    total_amount = db.Column(db.Numeric(10, 2), nullable=False)
+    invoice_date = db.Column(db.Date, nullable=False)
     attachment_path = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    purchase_order_id = db.Column(db.Integer, db.ForeignKey('purchase_order.id'), nullable=True)
 
 class Payment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -37,143 +29,85 @@ class Payment(db.Model):
     amount = db.Column(db.Numeric(10, 2), nullable=False)
     payment_date = db.Column(db.Date, nullable=False)
     notes = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-class PurchaseOrder(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False)
-    description = db.Column(db.Text, nullable=False)
-    price = db.Column(db.Numeric(10, 2), nullable=False)
-    status = db.Column(db.String(50), default='active')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    invoices = db.relationship('Invoice', backref='purchase_order', lazy=True)
-
 
 # --- مصنع التطبيقات ---
 def create_app():
     app = Flask(__name__)
-
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'a-very-secret-key')
-    app.config['UPLOAD_FOLDER'] = 'static/uploads'
-    
     db_url = os.environ.get('DATABASE_URL')
     if db_url and db_url.startswith("mysql://"):
         db_url = db_url.replace('mysql://', 'mysql+pymysql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
     db.init_app(app)
 
-    # --- تسجيل المسارات داخل المصنع ---
+    # --- مسارات عرض الصفحات ---
     @app.route('/')
-    def home():
-        suppliers_count = Supplier.query.count()
-        invoices_count = Invoice.query.count()
-        total_amount_query = db.session.query(db.func.sum(Invoice.total_amount)).scalar()
-        total_amount = total_amount_query or 0
-        purchase_orders_count = PurchaseOrder.query.count()
-        latest_invoices = Invoice.query.order_by(Invoice.created_at.desc()).limit(5).all()
-        latest_suppliers = []
-        supplier_ids = set()
-        for invoice in latest_invoices:
-            if invoice.supplier and invoice.supplier.id not in supplier_ids:
-                latest_suppliers.append(invoice.supplier)
-                supplier_ids.add(invoice.supplier.id)
-        return render_template('home.html', suppliers_count=suppliers_count, invoices_count=invoices_count, total_amount=total_amount, purchase_orders_count=purchase_orders_count, latest_invoices=latest_invoices, latest_suppliers=latest_suppliers)
+    def home(): return render_template('home.html')
 
-    @app.route('/add', methods=['GET', 'POST'])
-    def add_invoice():
-        if request.method == 'POST':
-            supplier_name = request.form.get('supplier_name')
-            supplier = Supplier.query.filter_by(name=supplier_name).first()
-            if not supplier:
-                supplier = Supplier(name=supplier_name)
-                db.session.add(supplier)
-                db.session.flush()
-            attachment_filename = None
-            if 'attachment' in request.files:
-                file = request.files['attachment']
-                if file.filename != '':
-                    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-                    attachment_filename = secure_filename(file.filename)
-                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], attachment_filename))
-            invoice_date_str = request.form.get('invoice_date')
-            amount = float(request.form.get('amount_pre_tax'))
-            tax = float(request.form.get('tax_amount'))
-            new_invoice = Invoice(supplier_id=supplier.id, supplier_name=supplier.name, invoice_number=request.form.get('invoice_number'), invoice_type=request.form.get('invoice_type'), category_name=request.form.get('category_name'), invoice_date=datetime.strptime(invoice_date_str, '%Y-%m-%d').date(), amount_pre_tax=amount, tax_amount=tax, total_amount=amount + tax, notes=request.form.get('notes'), attachment_path=attachment_filename)
-            db.session.add(new_invoice)
-            db.session.commit()
-            flash('تم حفظ الفاتورة بنجاح!', 'success')
-            return redirect(url_for('home'))
-        return render_template('add.html')
+    @app.route('/add')
+    def add_invoice_page(): return render_template('add.html')
 
     @app.route('/view')
-    def view_suppliers():
-        all_suppliers = Supplier.query.order_by(Supplier.name).all()
-        stats_query = db.session.query(Invoice.supplier_id, db.func.count(Invoice.id).label('invoice_count'), db.func.sum(Invoice.total_amount).label('total_invoiced')).group_by(Invoice.supplier_id).all()
-        stats_map = {stat.supplier_id: stat for stat in stats_query}
-        suppliers_with_stats = []
-        for supplier in all_suppliers:
-            stats = stats_map.get(supplier.id)
-            suppliers_with_stats.append({'supplier': supplier, 'invoice_count': stats.invoice_count if stats else 0, 'total_invoiced': stats.total_invoiced if stats else 0})
-        return render_template('view.html', suppliers_with_stats=suppliers_with_stats)
+    def view_page(): return render_template('view.html')
 
-    @app.route('/supplier/<int:supplier_id>')
-    def supplier_details(supplier_id):
+    # --- واجهة برمجة التطبيقات (API) ---
+    @app.route('/api/data', methods=['GET'])
+    def get_all_data():
+        suppliers = Supplier.query.all()
+        invoices = Invoice.query.all()
+        payments = Payment.query.all()
+
+        return jsonify({
+            'suppliers': [{'id': s.id, 'name': s.name} for s in suppliers],
+            'invoices': [{'id': i.id, 'supplier_id': i.supplier_id, 'invoice_number': i.invoice_number, 'total_amount': float(i.total_amount), 'date': i.invoice_date.strftime('%Y-%m-%d'), 'notes': i.notes} for i in invoices],
+            'payments': [{'id': p.id, 'supplier_id': p.supplier_id, 'amount': float(p.amount), 'date': p.payment_date.strftime('%Y-%m-%d'), 'notes': p.notes} for p in payments]
+        })
+
+    @app.route('/api/suppliers/<int:supplier_id>/edit', methods=['POST'])
+    def edit_supplier(supplier_id):
         supplier = Supplier.query.get_or_404(supplier_id)
-        invoices = Invoice.query.filter_by(supplier_id=supplier_id).order_by(Invoice.invoice_date.desc()).all()
-        payments = Payment.query.filter_by(supplier_id=supplier_id).order_by(Payment.payment_date.desc()).all()
-        total_invoiced = sum(inv.total_amount for inv in invoices)
-        total_paid = sum(pay.amount for pay in payments)
-        outstanding_balance = total_invoiced - total_paid
-        return render_template('supplier_details.html', supplier=supplier, invoices=invoices, payments=payments, total_invoiced=total_invoiced, total_paid=total_paid, outstanding_balance=outstanding_balance)
+        data = request.json
+        new_name = data.get('name')
+        if not new_name:
+            return jsonify({'success': False, 'message': 'الاسم الجديد مطلوب'}), 400
         
-    @app.route('/supplier/<int:supplier_id>/add_payment', methods=['POST'])
-    def add_payment(supplier_id):
-        supplier = Supplier.query.get_or_404(supplier_id)
-        amount = request.form.get('payment_amount')
-        payment_date_str = request.form.get('payment_date')
-        notes = request.form.get('payment_notes')
-        if not amount or not payment_date_str:
-            flash('المبلغ والتاريخ حقول مطلوبة.', 'danger')
-            return redirect(url_for('supplier_details', supplier_id=supplier_id))
-        new_payment = Payment(supplier_id=supplier.id, amount=float(amount), payment_date=datetime.strptime(payment_date_str, '%Y-%m-%d').date(), notes=notes)
-        db.session.add(new_payment)
+        # تحديث اسم المورد في كل الفواتير المرتبطة (إذا أردت ذلك)
+        # for invoice in supplier.invoices:
+        #     invoice.supplier_name = new_name
+            
+        supplier.name = new_name
         db.session.commit()
-        flash('تم تسجيل الدفعة بنجاح!', 'success')
-        return redirect(url_for('supplier_details', supplier_id=supplier_id))
+        return jsonify({'success': True, 'message': 'تم تحديث اسم المورد بنجاح'})
 
-    # --- << المسار الجديد لحذف الفاتورة >> ---
-    @app.route('/invoice/<int:invoice_id>/delete', methods=['POST'])
+    @app.route('/api/invoices/<int:invoice_id>/delete', methods=['POST'])
     def delete_invoice(invoice_id):
         invoice = Invoice.query.get_or_404(invoice_id)
-        supplier_id = invoice.supplier_id # نحفظ رقم المورد للعودة لصفحته
-
-        # حذف الملف المرفق إذا كان موجودًا
-        if invoice.attachment_path:
-            try:
-                os.remove(os.path.join(app.config['UPLOAD_FOLDER'], invoice.attachment_path))
-            except OSError as e:
-                print(f"Error deleting file {invoice.attachment_path}: {e}")
-
-        # حذف سجل الفاتورة من قاعدة البيانات
         db.session.delete(invoice)
         db.session.commit()
+        return jsonify({'success': True, 'message': 'تم حذف الفاتورة بنجاح'})
 
-        flash('تم حذف الفاتورة بنجاح.', 'success')
-        return redirect(url_for('supplier_details', supplier_id=supplier_id))
+    @app.route('/api/payments', methods=['POST'])
+    def add_payment_api():
+        data = request.json
+        supplier_id = data.get('supplier_id')
+        amount = data.get('amount')
+        date_str = data.get('date')
 
-    @app.route('/api/search_suppliers')
-    def search_suppliers():
-        query = request.args.get('q', '')
-        if len(query) < 1:
-            return jsonify([])
-        suppliers = Supplier.query.filter(Supplier.name.like(f'%{query}%')).limit(5).all()
-        return jsonify([{'id': s.id, 'name': s.name} for s in suppliers])
-        
-    @app.route('/health')
-    def health_check():
-        return "OK", 200
+        if not all([supplier_id, amount, date_str]):
+             return jsonify({'success': False, 'message': 'بيانات ناقصة'}), 400
+
+        new_payment = Payment(
+            supplier_id=supplier_id,
+            amount=float(amount),
+            payment_date=datetime.strptime(date_str, '%Y-%m-%d').date(),
+            notes=data.get('notes')
+        )
+        db.session.add(new_payment)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'تمت إضافة الدفعة بنجاح', 'payment': {'id': new_payment.id, 'supplier_id': new_payment.supplier_id, 'amount': float(new_payment.amount), 'date': new_payment.payment_date.strftime('%Y-%m-%d'), 'notes': new_payment.notes}}), 201
+
+    # أضف هنا باقي الـ APIs للحذف والتعديل مستقبلاً...
 
     return app
 
