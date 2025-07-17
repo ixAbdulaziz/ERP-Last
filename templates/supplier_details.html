@@ -87,7 +87,7 @@
   </div>
 </section>
 
-<div id="add-payment-modal" class="modal hidden">
+<div id="add-payment-modal" class="modal modal-is-hidden">
   <div class="modal-content">
     <h3 class="text-2xl font-bold mb-2">إضافة دفعة جديدة</h3>
     <p class="mb-6 text-slate-400">تسجيل دفعة جديدة للمورد: {{ supplier.name }}</p>
@@ -105,7 +105,7 @@
   </div>
 </div>
 
-<div id="delete-invoice-modal" class="modal hidden">
+<div id="delete-invoice-modal" class="modal modal-is-hidden">
   <div class="modal-content">
     <div class="text-center">
         <div class="delete-icon"><svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></div>
@@ -128,14 +128,17 @@
     // --- دالة عامة لإغلاق كل النوافذ ---
     function closeModal(modal) {
       if(modal) {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
+        modal.classList.add('modal-is-hidden');
+        modal.classList.remove('modal-is-visible');
       }
     }
     function openModal(modal) {
         if(modal) {
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
+            // أولاً، أغلق أي نوافذ أخرى مفتوحة
+            document.querySelectorAll('.modal').forEach(m => closeModal(m));
+            // ثم افتح النافذة المطلوبة
+            modal.classList.remove('modal-is-hidden');
+            modal.classList.add('modal-is-visible');
         }
     }
 
@@ -151,7 +154,6 @@
         openModal(addPaymentModal);
       });
     }
-
     if (cancelPaymentBtn) cancelPaymentBtn.addEventListener('click', () => closeModal(addPaymentModal));
     if (addPaymentModal) addPaymentModal.addEventListener('click', e => { if (e.target === addPaymentModal) closeModal(addPaymentModal); });
 
@@ -176,7 +178,7 @@
             });
         });
 
-        cancelDeleteBtn.addEventListener('click', () => closeModal(deleteInvoiceModal));
+        if (cancelDeleteBtn) cancelDeleteBtn.addEventListener('click', () => closeModal(deleteInvoiceModal));
         deleteInvoiceModal.addEventListener('click', e => { if(e.target === deleteInvoiceModal) closeModal(deleteInvoiceModal); });
     }
   });
