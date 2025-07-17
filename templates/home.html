@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة المشتريات - الرئيسية</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- شريط التنقل -->
+    <nav class="navbar">
+        <ul>
+            <li><a href="/">الرئيسية</a></li>
+            <li><a href="/add">إضافة فاتورة</a></li>
+            <li><a href="/view">عرض الفواتير</a></li>
+            <li><a href="/purchase-orders">أوامر الشراء</a></li>
+        </ul>
+    </nav>
+
+    <!-- المحتوى الرئيسي -->
+    <div class="container">
+        <div class="card">
+            <h1>مرحباً بك في نظام إدارة المشتريات</h1>
+            <p>نظام متكامل لإدارة فواتير المشتريات وأوامر الشراء</p>
+        </div>
+
+        <!-- إحصائيات سريعة -->
+        <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+            <div class="card">
+                <h3>إجمالي الفواتير</h3>
+                <p id="total-invoices" style="font-size: 2rem; color: #3498db;">0</p>
+            </div>
+            <div class="card">
+                <h3>فواتير هذا الشهر</h3>
+                <p id="month-invoices" style="font-size: 2rem; color: #27ae60;">0</p>
+            </div>
+            <div class="card">
+                <h3>أوامر شراء معلقة</h3>
+                <p id="pending-orders" style="font-size: 2rem; color: #e74c3c;">0</p>
+            </div>
+            <div class="card">
+                <h3>إجمالي المشتريات</h3>
+                <p id="total-amount" style="font-size: 2rem; color: #9b59b6;">0 ريال</p>
+            </div>
+        </div>
+
+        <!-- آخر الفواتير -->
+        <div class="card" style="margin-top: 2rem;">
+            <h2>آخر الفواتير المضافة</h2>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>رقم الفاتورة</th>
+                        <th>المورد</th>
+                        <th>التاريخ</th>
+                        <th>المبلغ</th>
+                    </tr>
+                </thead>
+                <tbody id="recent-invoices">
+                    <tr>
+                        <td colspan="4" style="text-align: center;">جاري التحميل...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+    <script>
+        // تحميل الإحصائيات عند فتح الصفحة
+        window.onload = async function() {
+            // جلب الإحصائيات
+            const stats = await fetchData('/stats');
+            if (stats) {
+                document.getElementById('total-invoices').textContent = stats.total_invoices || 0;
+                document.getElementById('month-invoices').textContent = stats.month_invoices || 0;
+                document.getElementById('pending-orders').textContent = stats.pending_orders || 0;
+                document.getElementById('total-amount').textContent = formatCurrency(stats.total_amount || 0);
+            }
+
+            // جلب آخر الفواتير
+            const invoices = await fetchData('/invoices/recent');
+            if (invoices && invoices.length > 0) {
+                const tbody = document.getElementById('recent-invoices');
+                tbody.innerHTML = invoices.map(invoice => `
+                    <tr>
+                        <td>${invoice.invoice_number}</td>
+                        <td>${invoice.supplier}</td>
+                        <td>${formatDate(invoice.date)}</td>
+                        <td>${formatCurrency(invoice.amount)}</td>
+                    </tr>
+                `).join('');
+            }
+        };
+    </script>
+</body>
+</html>
