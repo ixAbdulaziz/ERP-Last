@@ -34,16 +34,17 @@
   </div>
   <div class="modern-table-container">
     <table class="payment-table">
-      <thead><tr><th>التاريخ</th><th>المبلغ</th><th>الملاحظات</th></tr></thead>
+      <thead><tr><th>التاريخ</th><th>المبلغ</th><th>الملاحظات</th><th>العمليات</th></tr></thead>
       <tbody>
         {% for payment in payments %}
           <tr>
             <td>{{ payment.payment_date.strftime('%Y-%m-%d') }}</td>
             <td class="font-bold text-green-300">{{ "%.2f"|format(payment.amount) }} ريال</td>
             <td>{{ payment.notes or 'لا توجد' }}</td>
+            <td></td>
           </tr>
         {% else %}
-          <tr><td colspan="3" class="text-center py-8 text-slate-400">لا توجد مدفوعات مسجلة لهذا المورد.</td></tr>
+          <tr><td colspan="4" class="text-center py-8 text-slate-400">لا توجد مدفوعات مسجلة لهذا المورد.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -119,12 +120,10 @@
     </form>
   </div>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
 <script>
-  // دالة لإغلاق أي نافذة منبثقة مفتوحة
   function closeAllModals() {
     document.querySelectorAll('.modal').forEach(modal => {
       modal.classList.add('hidden');
@@ -133,7 +132,6 @@
   }
 
   document.addEventListener('DOMContentLoaded', function() {
-    // --- منطق نافذة إضافة دفعة ---
     const addPaymentModal = document.getElementById('add-payment-modal');
     const addPaymentBtn = document.getElementById('add-payment-btn');
     const cancelPaymentBtn = document.getElementById('cancel-payment-btn');
@@ -141,19 +139,18 @@
 
     if (addPaymentBtn && addPaymentModal && cancelPaymentBtn && paymentDateInput) {
       addPaymentBtn.addEventListener('click', () => {
-        closeAllModals(); // إغلاق أي نوافذ أخرى
+        closeAllModals();
         paymentDateInput.valueAsDate = new Date();
         addPaymentModal.classList.remove('hidden');
         addPaymentModal.classList.add('flex');
       });
 
-      cancelPaymentBtn.addEventListener('click', () => closeAllModals());
+      cancelPaymentBtn.addEventListener('click', closeAllModals);
       addPaymentModal.addEventListener('click', (e) => {
         if (e.target === addPaymentModal) closeAllModals();
       });
     }
 
-    // --- منطق نافذة تأكيد حذف الفاتورة ---
     const deleteInvoiceModal = document.getElementById('delete-invoice-modal');
     const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
     const invoiceNumberSpan = document.getElementById('invoice-number-to-delete');
@@ -163,7 +160,7 @@
     if (deleteInvoiceModal && cancelDeleteBtn && invoiceNumberSpan && deleteInvoiceForm) {
         deleteButtons.forEach(button => {
             button.addEventListener('click', function() {
-                closeAllModals(); // إغلاق أي نوافذ أخرى
+                closeAllModals();
                 const invoiceId = this.dataset.invoiceId;
                 const invoiceNumber = this.dataset.invoiceNumber;
                 
@@ -175,7 +172,7 @@
             });
         });
 
-        cancelDeleteBtn.addEventListener('click', () => closeAllModals());
+        cancelDeleteBtn.addEventListener('click', closeAllModals);
         deleteInvoiceModal.addEventListener('click', (e) => {
             if(e.target === deleteInvoiceModal) closeAllModals();
         });
