@@ -98,9 +98,11 @@ def create_tables():
         print(f"خطأ في إنشاء الجداول: {e}")
 
 # محاولة إنشاء الجداول عند بدء التطبيق
-@app.before_first_request
-def initialize_database():
-    create_tables()
+with app.app_context():
+    try:
+        create_tables()
+    except Exception as e:
+        print(f"تأجيل إنشاء الجداول: {e}")
 
 # المسارات (Routes)
 
