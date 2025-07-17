@@ -12,45 +12,26 @@ class Supplier(db.Model):
     name = db.Column(db.String(255), unique=True, nullable=False)
     invoices = db.relationship('Invoice', backref='supplier', lazy=True, cascade="all, delete-orphan")
     payments = db.relationship('Payment', backref='supplier', lazy=True, cascade="all, delete-orphan")
-    purchase_orders = db.relationship('PurchaseOrder', backref='supplier', lazy=True, cascade="all, delete-orphan")
 
 class Invoice(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False)
-    supplier_name = db.Column(db.String(255), nullable=False)
     invoice_number = db.Column(db.String(100), nullable=False)
-    invoice_type = db.Column(db.String(100), nullable=False)
-    category_name = db.Column(db.String(100), nullable=False)
-    invoice_date = db.Column(db.Date, nullable=False)
-    amount_pre_tax = db.Column(db.Numeric(10, 2), nullable=False)
-    tax_amount = db.Column(db.Numeric(10, 2), nullable=False)
     total_amount = db.Column(db.Numeric(10, 2), nullable=False)
+    invoice_date = db.Column(db.Date, nullable=False)
     notes = db.Column(db.Text, nullable=True)
-    attachment_path = db.Column(db.String(255), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    purchase_order_id = db.Column(db.Integer, db.ForeignKey('purchase_order.id'), nullable=True)
-
+    # ملاحظة: تم إزالة الأعمدة غير المستخدمة حاليًا لتبسيط الأمر
+    
 class Payment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False)
     amount = db.Column(db.Numeric(10, 2), nullable=False)
     payment_date = db.Column(db.Date, nullable=False)
     notes = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-class PurchaseOrder(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False)
-    description = db.Column(db.Text, nullable=False)
-    price = db.Column(db.Numeric(10, 2), nullable=False)
-    status = db.Column(db.String(50), default='active')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    invoices = db.relationship('Invoice', backref='purchase_order', lazy=True)
 
 # --- مصنع التطبيقات ---
 def create_app():
     app = Flask(__name__, static_folder='static')
-    
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'a-very-secret-key')
     app.config['UPLOAD_FOLDER'] = 'static/uploads'
     db_url = os.environ.get('DATABASE_URL')
@@ -60,85 +41,80 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)
 
-    # --- المسارات ---
+    # --- المسارات التي تعرض صفحات HTML ---
     @app.route('/')
-    def home():
-        suppliers_count = Supplier.query.count()
-        invoices_count = Invoice.query.count()
-        total_amount_query = db.session.query(db.func.sum(Invoice.total_amount)).scalar()
-        total_amount = total_amount_query or 0
-        purchase_orders_count = PurchaseOrder.query.count()
-        latest_invoices = Invoice.query.order_by(Invoice.created_at.desc()).limit(5).all()
-        latest_suppliers = []
-        supplier_ids = set()
-        for invoice in latest_invoices:
-            if invoice.supplier and invoice.supplier.id not in supplier_ids:
-                latest_suppliers.append(invoice.supplier)
-                supplier_ids.add(invoice.supplier.id)
-        return render_template('home.html', suppliers_count=suppliers_count, invoices_count=invoices_count, total_amount=total_amount, purchase_orders_count=purchase_orders_count, latest_invoices=latest_invoices, latest_suppliers=latest_suppliers)
-
-    # --- << تم تعديل هذه الدالة لاستقبال وحفظ البيانات >> ---
-    @app.route('/add', methods=['GET', 'POST'])
-    def add_invoice_page():
-        if request.method == 'POST':
-            # 1. الحصول على البيانات من النموذج
-            supplier_name = request.form.get('supplier_name')
-            
-            # 2. التحقق من المورد أو إنشاء واحد جديد
-            supplier = Supplier.query.filter_by(name=supplier_name).first()
-            if not supplier:
-                supplier = Supplier(name=supplier_name)
-                db.session.add(supplier)
-                db.session.flush()
-
-            # 3. التعامل مع المرفقات
-            attachment_filename = None
-            if 'attachment' in request.files:
-                file = request.files['attachment']
-                if file.filename != '':
-                    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-                    attachment_filename = secure_filename(file.filename)
-                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], attachment_filename))
-
-            # 4. تجميع بيانات الفاتورة
-            invoice_date_str = request.form.get('invoice_date')
-            amount = float(request.form.get('amount_pre_tax'))
-            tax = float(request.form.get('tax_amount'))
-            
-            new_invoice = Invoice(
-                supplier_id=supplier.id,
-                supplier_name=supplier.name,
-                invoice_number=request.form.get('invoice_number'),
-                invoice_type=request.form.get('invoice_type'),
-                category_name=request.form.get('category_name'),
-                invoice_date=datetime.strptime(invoice_date_str, '%Y-%m-%d').date(),
-                amount_pre_tax=amount,
-                tax_amount=tax,
-                total_amount=amount + tax,
-                notes=request.form.get('notes'),
-                attachment_path=attachment_filename
-            )
-
-            # 5. حفظ الفاتورة في قاعدة البيانات
-            db.session.add(new_invoice)
-            db.session.commit()
-
-            flash('تم حفظ الفاتورة بنجاح!', 'success')
-            return redirect(url_for('home'))
-
-        # عند طلب GET، اعرض الصفحة فقط
-        return render_template('add.html')
-
+    def home(): return render_template('home.html')
+    @app.route('/add')
+    def add_invoice_page(): return render_template('add.html')
     @app.route('/view')
     def view_page(): return render_template('view.html')
-    
-    @app.route('/purchase-orders')
-    def purchase_orders_page(): return render_template('purchase-orders.html')
-
     @app.route('/health')
     def health_check(): return "OK", 200
 
-    # يمكنك إضافة واجهات API هنا لاحقًا...
+    # --- << واجهة برمجة التطبيقات (API) >> ---
+    @app.route('/api/data', methods=['GET'])
+    def get_all_data():
+        suppliers = Supplier.query.order_by(Supplier.name).all()
+        invoices = Invoice.query.order_by(Invoice.invoice_date.desc()).all()
+        payments = Payment.query.order_by(Payment.payment_date.desc()).all()
+        
+        return jsonify({
+            'suppliers': [{'id': s.id, 'name': s.name} for s in suppliers],
+            'invoices': [{'id': i.id, 'supplier_id': i.supplier_id, 'invoice_number': i.invoice_number, 'total_amount': float(i.total_amount), 'date': i.invoice_date.strftime('%Y-%m-%d'), 'notes': i.notes} for i in invoices],
+            'payments': [{'id': p.id, 'supplier_id': p.supplier_id, 'amount': float(p.amount), 'date': p.payment_date.strftime('%Y-%m-%d'), 'notes': p.notes} for p in payments]
+        })
+
+    @app.route('/api/invoices', methods=['POST'])
+    def add_invoice_api():
+        data = request.json
+        supplier_name = data.get('supplier')
+        
+        supplier = Supplier.query.filter_by(name=supplier_name).first()
+        if not supplier:
+            supplier = Supplier(name=supplier_name)
+            db.session.add(supplier)
+            db.session.commit()
+
+        new_invoice = Invoice(
+            supplier_id=supplier.id,
+            invoice_number=data.get('invoiceNumber'),
+            total_amount=float(data.get('totalAmount')),
+            invoice_date=datetime.strptime(data.get('date'), '%Y-%m-%d').date(),
+            notes=data.get('notes')
+        )
+        db.session.add(new_invoice)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'تمت إضافة الفاتورة بنجاح'}), 201
+    
+    @app.route('/api/invoices/<int:invoice_id>/delete', methods=['POST'])
+    def delete_invoice_api(invoice_id):
+        invoice = Invoice.query.get_or_404(invoice_id)
+        db.session.delete(invoice)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'تم حذف الفاتورة بنجاح'})
+        
+    @app.route('/api/payments', methods=['POST'])
+    def add_payment_api():
+        data = request.json
+        payment = Payment(
+            supplier_id=int(data['supplier_id']),
+            amount=float(data['amount']),
+            payment_date=datetime.strptime(data['date'], '%Y-%m-%d').date(),
+            notes=data.get('notes')
+        )
+        db.session.add(payment)
+        db.session.commit()
+        return jsonify({
+            'success': True, 
+            'payment': {
+                'id': payment.id, 
+                'supplier_id': payment.supplier_id,
+                'amount': float(payment.amount), 
+                'date': payment.payment_date.strftime('%Y-%m-%d'), 
+                'notes': payment.notes
+            }
+        }), 201
 
     return app
 
