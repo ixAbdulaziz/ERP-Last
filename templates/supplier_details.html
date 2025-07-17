@@ -125,45 +125,38 @@
 {% block scripts %}
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    // --- دالة عامة لإغلاق كل النوافذ ---
-    function closeAllModals() {
-      document.querySelectorAll('.modal').forEach(modal => {
+    function setupModal(modalId, openBtnId, closeBtnId) {
+      const modal = document.getElementById(modalId);
+      const openBtn = document.getElementById(openBtnId);
+      const closeBtn = document.getElementById(closeBtnId);
+
+      if (!modal || !openBtn || !closeBtn) return;
+
+      const openModal = () => {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      };
+      const closeModal = () => {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
+      };
+
+      openBtn.addEventListener('click', openModal);
+      closeBtn.addEventListener('click', closeModal);
+      modal.addEventListener('click', e => {
+        if (e.target === modal) closeModal();
       });
     }
 
-    // --- منطق نافذة إضافة دفعة ---
-    const addPaymentModal = document.getElementById('add-payment-modal');
-    const addPaymentBtn = document.getElementById('add-payment-btn');
-    const cancelPaymentBtn = document.getElementById('cancel-payment-btn');
+    // تفعيل نافذة إضافة دفعة
+    setupModal('add-payment-modal', 'add-payment-btn', 'cancel-payment-btn');
     
-    // ربط الأحداث فقط إذا كانت العناصر موجودة
-    if (addPaymentBtn) {
-      addPaymentBtn.addEventListener('click', () => {
-        if(addPaymentModal) {
-          const paymentDateInput = addPaymentModal.querySelector('input[name="payment_date"]');
-          paymentDateInput.valueAsDate = new Date();
-          addPaymentModal.classList.remove('hidden');
-          addPaymentModal.classList.add('flex');
-        }
-      });
-    }
-
-    if (cancelPaymentBtn) {
-      cancelPaymentBtn.addEventListener('click', closeAllModals);
-    }
-    
-    if (addPaymentModal) {
-        addPaymentModal.addEventListener('click', e => { if (e.target === addPaymentModal) closeAllModals(); });
-    }
-
-    // --- منطق نافذة تأكيد حذف الفاتورة ---
+    // تفعيل نافذة حذف الفواتير
     const deleteInvoiceModal = document.getElementById('delete-invoice-modal');
-    const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
     const deleteButtons = document.querySelectorAll('.delete-invoice-btn');
+    const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
 
-    if (deleteInvoiceModal) {
+    if(deleteInvoiceModal && cancelDeleteBtn){
         deleteButtons.forEach(button => {
             button.addEventListener('click', function() {
                 const invoiceId = this.dataset.invoiceId;
@@ -179,9 +172,10 @@
                 deleteInvoiceModal.classList.add('flex');
             });
         });
-
-        if (cancelDeleteBtn) cancelDeleteBtn.addEventListener('click', closeAllModals);
-        deleteInvoiceModal.addEventListener('click', e => { if(e.target === deleteInvoiceModal) closeAllModals(); });
+        cancelDeleteBtn.addEventListener('click', () => {
+            deleteInvoiceModal.classList.add('hidden');
+            deleteInvoiceModal.classList.remove('flex');
+        });
     }
   });
 </script>
