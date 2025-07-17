@@ -49,7 +49,9 @@ class PurchaseOrder(db.Model):
 
 # --- مصنع التطبيقات ---
 def create_app():
-    app = Flask(__name__)
+    # --- << التغيير هنا: قمنا بتحديد مجلد static بشكل صريح >> ---
+    app = Flask(__name__, static_folder='static')
+    
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'a-very-secret-key')
     app.config['UPLOAD_FOLDER'] = 'static/uploads'
     db_url = os.environ.get('DATABASE_URL')
@@ -59,42 +61,20 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)
 
-    with app.app_context():
-        # إنشاء الجداول إذا لم تكن موجودة عند بدء تشغيل التطبيق لأول مرة
-        # db.create_all() # This can be slow, better to handle migrations separately
-        pass
-
     # --- المسارات ---
     @app.route('/')
     def home(): return render_template('home.html')
-
     @app.route('/add')
     def add_invoice_page(): return render_template('add.html')
-    
     @app.route('/view')
     def view_page(): return render_template('view.html')
-
     @app.route('/purchase-orders')
     def purchase_orders_page(): return render_template('purchase-orders.html')
-
     @app.route('/health')
-    def health_check():
-        return "OK", 200
+    def health_check(): return "OK", 200
 
-    # --- API Endpoints ---
-    @app.route('/api/data', methods=['GET'])
-    def get_all_data():
-        suppliers = Supplier.query.order_by(Supplier.name).all()
-        invoices = Invoice.query.order_by(Invoice.invoice_date.desc()).all()
-        payments = Payment.query.order_by(Payment.payment_date.desc()).all()
-        return jsonify({
-            'suppliers': [{'id': s.id, 'name': s.name} for s in suppliers],
-            'invoices': [{'id': i.id, 'supplier_id': i.supplier_id, 'invoice_number': i.invoice_number, 'total_amount': float(i.total_amount), 'date': i.invoice_date.strftime('%Y-%m-%d'), 'notes': i.notes} for i in invoices],
-            'payments': [{'id': p.id, 'supplier_id': p.supplier_id, 'amount': float(p.amount), 'date': p.payment_date.strftime('%Y-%m-%d'), 'notes': p.notes} for p in payments]
-        })
+    # يمكنك إضافة واجهات API هنا لاحقًا...
 
-    # Add other API endpoints here (add, edit, delete for invoices/payments/POs)
-    
     return app
 
 app = create_app()
