@@ -1,67 +1,283 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl" class="dark">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>عرض الفواتير حسب المورد</title>
-  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;600;700&display=swap');
-  </style>
-</head>
-<body class="flex bg-gray-900 text-gray-100 min-h-screen">
-  <aside class="sidebar w-64 flex-col p-8 hidden md:flex">
-      </aside>
-  
-  <main class="flex-1 p-8 space-y-8">
-      </main>
-  
-  <script>
-    document.addEventListener('DOMContentLoaded', async () => {
-        let allSuppliers = [];
-        let allInvoices = [];
-        let allPayments = [];
+{% extends "layout.html" %}
 
-        // --- جلب البيانات من الخادم بدلاً من localStorage ---
-        async function fetchData() {
-            try {
-                const response = await fetch('/api/data');
-                if (!response.ok) throw new Error('Network response was not ok');
-                const data = await response.json();
-                allSuppliers = data.suppliers || [];
-                allInvoices = data.invoices || [];
-                allPayments = data.payments || [];
-                renderSuppliers(); // عرض الموردين بعد جلب البيانات
-            } catch (error) {
-                console.error('Failed to fetch data:', error);
-                // يمكنك عرض رسالة خطأ للمستخدم هنا
-            }
-        }
+{% block title %}عرض الفواتير{% endblock %}
+
+{% block content %}
+<main class="flex-1 p-8 space-y-8">
+    <section id="supplier-list" class="space-y-8 fade-up">
+      <div class="page-header">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h2 class="text-3xl font-bold bg-gradient-to-r from-slate-300 via-slate-200 to-slate-400 bg-clip-text text-transparent mb-2">الموردين</h2>
+            <p class="text-slate-400 text-base">اختر موردًا لعرض فواتيره ومدفوعاته</p>
+          </div>
+        </div>
+      </div>
+      <div id="suppliers-container" class="space-y-8">
+          </div>
+    </section>
+    
+    <section id="supplier-invoices" class="hidden space-y-8">
+      <div class="page-header">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h2 id="supplier-title" class="text-3xl font-bold bg-gradient-to-r from-slate-300 via-slate-200 to-slate-400 bg-clip-text text-transparent mb-2"></h2>
+            <p class="text-slate-400 text-base">جميع فواتير ومدفوعات هذا المورد</p>
+          </div>
+          <div class="btn-group">
+            <button id="back-btn" class="modern-btn">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+              العودة للموردين
+            </button>
+          </div>
+        </div>
         
-        // --- بقية دوال JavaScript كما هي في ملفك، مع تعديلات بسيطة ---
-        // (لقد قمت بتعديلها لتعمل مع البيانات الجديدة)
+        <div class="payment-stats">
+          <div class="payment-stat-card invoices"><div class="payment-stat-value invoices" id="supplier-invoices-total">0 ر.س</div><div class="payment-stat-label">إجمالي الفواتير</div></div>
+          <div class="payment-stat-card payments"><div class="payment-stat-value payments" id="supplier-payments-total">0 ر.س</div><div class="payment-stat-label">إجمالي المدفوعات</div></div>
+          <div class="payment-stat-card outstanding"><div class="payment-stat-value outstanding" id="supplier-outstanding-total">0 ر.س</div><div class="payment-stat-label">المبلغ المستحق</div></div>
+        </div>
+      </div>
+
+      <div class="glass-card fade-up">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-2xl font-bold text-slate-200">إدارة المدفوعات</h3>
+          <button id="add-payment-btn" class="modern-btn success">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+            إضافة دفعة جديدة
+          </button>
+        </div>
+        <div class="modern-table-container">
+          <table class="payment-table">
+            <thead><tr><th>التاريخ</th><th>المبلغ</th><th>الملاحظات</th></tr></thead>
+            <tbody id="payments-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+      
+      <div class="modern-table-container fade-up">
+        <table id="invoices-table" class="modern-table">
+          <thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>الإجمالي</th><th>الملاحظات</th><th>العمليات</th></tr></thead>
+          <tbody id="invoices-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  
+  <div id="add-payment-modal" class="modal modal-is-hidden">
+    <div class="modal-content">
+      <h3 class="text-2xl font-bold mb-2">إضافة دفعة جديدة</h3>
+      <p id="add-payment-supplier-name" class="mb-6 text-slate-400"></p>
+      <div class="space-y-4">
+        <div class="form-group"><label class="form-label">مبلغ الدفعة</label><input type="number" id="payment-amount" class="form-input" step="0.01" min="0" required></div>
+        <div class="form-group"><label class="form-label">تاريخ الدفعة</label><input type="date" id="payment-date" class="form-input" required></div>
+        <div class="form-group"><label class="form-label">ملاحظات</label><textarea id="payment-notes" class="form-input" rows="3"></textarea></div>
+      </div>
+      <div class="btn-group mt-8 justify-center">
+        <button id="save-payment-btn" class="modern-btn success">حفظ</button>
+        <button type="button" id="cancel-payment-btn" class="modern-btn">إلغاء</button>
+      </div>
+    </div>
+  </div>
+  
+  <div id="delete-invoice-modal" class="modal modal-is-hidden">
+     <div class="modal-content"><h3 class="text-xl font-bold">تأكيد الحذف</h3><p id="delete-invoice-text" class="my-4"></p><div class="btn-group"><button id="confirm-delete-invoice-btn" class="modern-btn danger">نعم، حذف</button><button id="cancel-delete-invoice-btn" class="modern-btn">إلغاء</button></div></div>
+  </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    // --- متغيرات لتخزين البيانات ---
+    let suppliers = [];
+    let invoices = [];
+    let payments = [];
+    let currentSupplierId = null;
+
+    // --- عناصر الواجهة ---
+    const elements = {
+        supplierListSection: document.getElementById('supplier-list'),
+        suppliersContainer: document.getElementById('suppliers-container'),
+        supplierInvoicesSection: document.getElementById('supplier-invoices'),
+        supplierTitle: document.getElementById('supplier-title'),
+        invoicesTableBody: document.getElementById('invoices-table-body'),
+        paymentsTableBody: document.getElementById('payments-table-body'),
+        supplierInvoicesTotal: document.getElementById('supplier-invoices-total'),
+        supplierPaymentsTotal: document.getElementById('supplier-payments-total'),
+        supplierOutstandingTotal: document.getElementById('supplier-outstanding-total'),
+        backBtn: document.getElementById('back-btn'),
+        // نوافذ الدفع
+        addPaymentModal: document.getElementById('add-payment-modal'),
+        addPaymentBtn: document.getElementById('add-payment-btn'),
+        cancelPaymentBtn: document.getElementById('cancel-payment-btn'),
+        savePaymentBtn: document.getElementById('save-payment-btn'),
+        addPaymentSupplierName: document.getElementById('add-payment-supplier-name'),
+        paymentAmountInput: document.getElementById('payment-amount'),
+        paymentDateInput: document.getElementById('payment-date'),
+        paymentNotesInput: document.getElementById('payment-notes'),
+        // نوافذ حذف الفاتورة
+        deleteInvoiceModal: document.getElementById('delete-invoice-modal'),
+        deleteInvoiceText: document.getElementById('delete-invoice-text'),
+        confirmDeleteInvoiceBtn: document.getElementById('confirm-delete-invoice-btn'),
+        cancelDeleteInvoiceBtn: document.getElementById('cancel-delete-invoice-btn'),
+    };
+    
+    // --- دالة لتنسيق العملة ---
+    const formatCurrency = (amount) => new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(amount || 0);
+
+    // --- دوال عرض البيانات ---
+    function renderSuppliers() {
+        elements.suppliersContainer.innerHTML = '';
+        suppliers.forEach(supplier => {
+            const supplierInvoices = invoices.filter(i => i.supplier_id === supplier.id);
+            const totalInvoiced = supplierInvoices.reduce((sum, i) => sum + i.total_amount, 0);
+            const card = document.createElement('div');
+            card.className = 'supplier-card cursor-pointer';
+            card.innerHTML = `
+                <h4 class="text-lg font-bold text-slate-200 mb-2">${supplier.name}</h4>
+                <div class="text-sm text-slate-400">إجمالي الفواتير: ${formatCurrency(totalInvoiced)}</div>
+            `;
+            card.addEventListener('click', () => showInvoicesForSupplier(supplier.id));
+            elements.suppliersContainer.appendChild(card);
+        });
+    }
+
+    function showInvoicesForSupplier(supplierId) {
+        currentSupplierId = supplierId;
+        const supplier = suppliers.find(s => s.id === supplierId);
+        if (!supplier) return;
+
+        elements.supplierListSection.classList.add('hidden');
+        elements.supplierInvoicesSection.classList.remove('hidden');
+        elements.supplierTitle.textContent = `فواتير ومدفوعات: ${supplier.name}`;
         
-        // مثال على تعديل دالة الحفظ
-        async function savePayment() {
-            const data = { /* ... بيانات الدفعة ... */ };
-            const response = await fetch('/api/payments', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
-            const result = await response.json();
-            if(result.success) {
-                // تحديث الواجهة بالدفعة الجديدة
-                allPayments.push(result.payment);
-                // إعادة عرض البيانات
-                renderPaymentsTable(); 
-            }
-        }
+        renderInvoicesAndPaymentsForCurrentSupplier();
+    }
+    
+    function renderInvoicesAndPaymentsForCurrentSupplier() {
+        if (!currentSupplierId) return;
+        const supplierInvoices = invoices.filter(i => i.supplier_id === currentSupplierId);
+        const supplierPayments = payments.filter(p => p.supplier_id === currentSupplierId);
+
+        // عرض الفواتير
+        elements.invoicesTableBody.innerHTML = '';
+        supplierInvoices.forEach(invoice => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${invoice.invoice_number}</td>
+                <td>${invoice.date}</td>
+                <td>${formatCurrency(invoice.total_amount)}</td>
+                <td>${invoice.notes || '-'}</td>
+                <td><button class="action-btn delete" data-invoice-id="${invoice.id}" data-invoice-number="${invoice.invoice_number}">حذف</button></td>
+            `;
+            elements.invoicesTableBody.appendChild(row);
+        });
+
+        // عرض المدفوعات
+        elements.paymentsTableBody.innerHTML = '';
+        supplierPayments.forEach(payment => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${payment.date}</td>
+                <td class="font-bold text-green-300">${formatCurrency(payment.amount)}</td>
+                <td>${payment.notes || '-'}</td>
+            `;
+            elements.paymentsTableBody.appendChild(row);
+        });
+
+        // تحديث الإحصائيات
+        const totalInvoiced = supplierInvoices.reduce((sum, i) => sum + i.total_amount, 0);
+        const totalPaid = supplierPayments.reduce((sum, p) => sum + p.amount, 0);
+        elements.supplierInvoicesTotal.textContent = formatCurrency(totalInvoiced);
+        elements.supplierPaymentsTotal.textContent = formatCurrency(totalPaid);
+        elements.supplierOutstandingTotal.textContent = formatCurrency(totalInvoiced - totalPaid);
         
-        // استدعاء دالة جلب البيانات عند تحميل الصفحة
-        await fetchData();
+        // إعادة ربط أحداث الحذف
+        setupDeleteInvoiceListeners();
+    }
+
+    function showSupplierList() {
+        currentSupplierId = null;
+        elements.supplierListSection.classList.remove('hidden');
+        elements.supplierInvoicesSection.classList.add('hidden');
+    }
+
+    // --- دوال النوافذ المنبثقة (Modals) ---
+    function openModal(modal) { if(modal) { modal.classList.remove('modal-is-hidden'); modal.classList.add('flex'); }}
+    function closeModal(modal) { if(modal) { modal.classList.add('modal-is-hidden'); modal.classList.remove('flex'); }}
+
+    // --- منطق إضافة دفعة ---
+    elements.addPaymentBtn.addEventListener('click', () => {
+        const supplier = suppliers.find(s => s.id === currentSupplierId);
+        elements.addPaymentSupplierName.textContent = `تسجيل دفعة جديدة للمورد: ${supplier.name}`;
+        elements.paymentDateInput.valueAsDate = new Date();
+        openModal(elements.addPaymentModal);
     });
-  </script>
-</body>
-</html>
+    elements.cancelPaymentBtn.addEventListener('click', () => closeModal(elements.addPaymentModal));
+    elements.savePaymentBtn.addEventListener('click', async () => {
+        const data = {
+            supplier_id: currentSupplierId,
+            amount: elements.paymentAmountInput.value,
+            date: elements.paymentDateInput.value,
+            notes: elements.paymentNotesInput.value,
+        };
+        const response = await fetch('/api/payments', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        if (result.success) {
+            payments.push(result.payment);
+            renderInvoicesAndPaymentsForCurrentSupplier();
+            closeModal(elements.addPaymentModal);
+        } else {
+            alert('خطأ: ' + result.message);
+        }
+    });
+
+    // --- منطق حذف فاتورة ---
+    function setupDeleteInvoiceListeners() {
+        document.querySelectorAll('.action-btn.delete').forEach(button => {
+            button.addEventListener('click', function() {
+                const invoiceId = this.dataset.invoiceId;
+                const invoiceNumber = this.dataset.invoiceNumber;
+                elements.deleteInvoiceText.innerHTML = `هل أنت متأكد من حذف الفاتورة رقم <strong>${invoiceNumber}</strong>؟`;
+                elements.confirmDeleteInvoiceBtn.dataset.invoiceId = invoiceId;
+                openModal(elements.deleteInvoiceModal);
+            });
+        });
+    }
+    elements.cancelDeleteInvoiceBtn.addEventListener('click', () => closeModal(elements.deleteInvoiceModal));
+    elements.confirmDeleteInvoiceBtn.addEventListener('click', async function() {
+        const invoiceId = this.dataset.invoiceId;
+        const response = await fetch(`/api/invoices/${invoiceId}/delete`, { method: 'POST' });
+        const result = await response.json();
+        if (result.success) {
+            invoices = invoices.filter(i => i.id !== parseInt(invoiceId));
+            renderInvoicesAndPaymentsForCurrentSupplier();
+            closeModal(elements.deleteInvoiceModal);
+        } else {
+            alert('خطأ في الحذف');
+        }
+    });
+
+    // --- منطق الرجوع للقائمة الرئيسية ---
+    elements.backBtn.addEventListener('click', showSupplierList);
+
+    // --- جلب البيانات الأولية ---
+    try {
+        const response = await fetch('/api/data');
+        const data = await response.json();
+        suppliers = data.suppliers;
+        invoices = data.invoices;
+        payments = data.payments;
+        renderSuppliers();
+    } catch (error) {
+        console.error('فشل في جلب البيانات الأولية:', error);
+        elements.suppliersContainer.innerHTML = '<p class="text-red-500 text-center">خطأ في تحميل بيانات الموردين.</p>';
+    }
+});
+</script>
+{% endblock %}
